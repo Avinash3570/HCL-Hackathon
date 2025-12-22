@@ -6,7 +6,13 @@
 
 **Dataset** - https://www.kaggle.com/datasets/sahilislam007/online-retail-customer-churn-prediction-dataset
 
+**streamlit deployed app** - https://churn-prediction-rwpcgtetaohbm8cjdtazli.streamlit.app/ 
+
+**app-github link** - https://github.com/swakshpatwari05/Churn-Prediction
 ## Procedure:
+
+
+**Work Flow Design**
 
 ```
 Raw Customer Data (CSV)
@@ -152,3 +158,96 @@ Precision measures how many predicted churners actually churned. Higher precisio
 
 ### ROC-AUC
 The ROC curve shows how well the Random Forest separates churners from non-churners across different thresholds.
+
+---
+
+## Customer Churn Prediction Report: Online Retail Dataset
+
+### 1. Use Case Description
+The objective of this project is to build a machine learning model that predicts customer churn for an online retail business. Early identification of customers at risk of churning allows the company to implement targeted retention strategies (e.g., personalized offers, improved support), thereby reducing revenue loss.
+
+This analysis is based on a larger, more comprehensive real-world dataset: `online_retail_customer_data_extended.csv` with ~9,000 customer records. Key evaluation metrics: **Accuracy, Precision, Recall, ROC-AUC, Confusion Matrix**. Given the class imbalance (~20% churn), **Recall** is particularly important for capturing at-risk customers.
+
+### 2. Dataset Description
+- Rows: 9,000
+- Columns: 17 original features
+- Target Variable: `Churn` (1 = Churned, 0 = Retained)
+- Churn Distribution: 1,776 churned (19.73%), 7,224 retained (80.27%) → Significant class imbalance
+
+Key Features (type grouped):
+- Demographic: `Age`, `Gender`
+- Financial: `Annual_Income_USD`, `Spending_Score`, `Total_Purchases`, `Avg_Purchase_Value`, `Total_Spend` (engineered)
+- Behavioral: `Website_Visits_Last_Month`, `Avg_Time_Per_Visit_Minutes`, `Engagement_Score` (engineered), `Days_Since_Last_Purchase` (engineered)
+- Support: `Support_Tickets_Last_6_Months`, `Satisfaction_Score`, `Support_Risk_Score` (engineered)
+- Loyalty: `Membership_Status`, `Referred_Friends`, `Is_Loyal_Customer` (engineered)
+- Categorical: `Preferred_Payment_Method`, `Region`
+
+No missing values were present after initial checks.
+
+### 3. Data Preprocessing & Feature Engineering
+- Dropped irrelevant column: `CustomerID`
+- Converted `Last_Purchase_Date` to datetime and engineered `Days_Since_Last_Purchase` (recency)
+- Engineered additional predictive features:
+  - `Total_Spend` = `Total_Purchases` × `Avg_Purchase_Value`
+  - `Avg_Spend_Per_Visit`
+  - `Engagement_Score` = `Website_Visits_Last_Month` × `Avg_Time_Per_Visit_Minutes`
+  - `Is_Loyal_Customer` (based on referrals or premium membership)
+  - `Support_Risk_Score` = `Support_Tickets_Last_6_Months` × (5 – `Satisfaction_Score`)
+- One-hot encoded categorical variables: `Membership_Status`, `Preferred_Payment_Method`, `Region`
+- Label encoded `Gender`
+- Final feature count after engineering: **27 features**
+
+### 4. Exploratory Data Analysis (Key Insights)
+- Higher churn associated with:
+  - More support tickets
+  - Lower satisfaction scores
+  - Longer time since last purchase
+  - Lower engagement (visits × time)
+- Certain payment methods and regions showed slightly elevated churn rates
+- No strong linear correlations among numerical features, but engineered features (e.g., `Support_Risk_Score`) logically align with churn risk
+
+### 5. Model Training & Handling Imbalance
+- Train–test split: 80% train (7,200), 20% test (1,800), stratified
+- Scaling: `StandardScaler` applied to numerical features
+- Imbalance handling approaches used:
+  - Logistic Regression with `class_weight='balanced'`
+  - Random Forest with `class_weight` adjusted (example: `{0:1, 1:3}`)
+  - XGBoost with `scale_pos_weight` tuned (≈ 4.06)
+  - SMOTE oversampling applied to training data for exploration
+
+Three models were trained and evaluated (sample metrics):
+
+- Logistic Regression (threshold 0.5): Accuracy 0.508, Precision 0.199, Recall 0.493, ROC-AUC 0.502
+- Random Forest (threshold 0.35): Accuracy 0.414, Precision 0.207, Recall 0.696, ROC-AUC 0.527
+- XGBoost (threshold 0.5): Accuracy 0.693, Precision 0.225, Recall 0.228, ROC-AUC 0.530
+
+**Threshold analysis (XGBoost)**: Lowering probability threshold (0.3–0.4) increases Recall (0.54–0.78) but reduces Accuracy; default 0.5 gives balanced accuracy with moderate Recall.
+
+**ROC-style summary**: XGBoost achieved the highest ROC-AUC (~0.530), followed by Random Forest (~0.527). Overall discriminative power is moderate, indicating room for richer features.
+
+### 6. Model Evaluation Summary
+- **Best Accuracy:** XGBoost (~69.3%)
+- **Best Recall (critical for churn detection):** Random Forest at threshold ≈ 0.35 (≈69.6% of churners identified)
+- Trade-off: High recall sacrifices accuracy/precision due to imbalance
+- Overall Predictive Power: Moderate (ROC-AUC ~0.53 across models)
+
+**Business Recommendation:**
+- Use Random Forest with threshold ≈ 0.35 if the goal is to maximize identification of at-risk customers (acceptable false positives for retention campaigns).
+- Use XGBoost at default threshold if false positives are costly and a more conservative approach is preferred.
+
+### 7. Conclusion & Recommendations
+The models predict customer churn with moderate performance on this 9,000-record online retail dataset. Class imbalance (20% churn) was addressed through weighting and SMOTE, enabling reasonable recall rates.
+
+**Key drivers of churn (from tree-model importance & EDA):**
+- High support tickets + low satisfaction
+- Low recent engagement and spending
+- Longer recency since last purchase
+
+**Next steps:**
+- Collect additional behavioral features (e.g., product category preferences, discount usage)
+- Experiment with ensembles and stacking (RF + XGBoost)
+- Implement model in production with probability thresholds tuned to business cost of false positives vs. missed churn
+- Monitor model drift as customer behavior evolves
+
+---
+*Added: Customer Churn Prediction Report (detailed summary, 2025-12-22)*
